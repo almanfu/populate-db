@@ -1,4 +1,4 @@
-class movie_award:
+class MovieAward:
     def __init__(self, title, year, award, result):
         self.title = title
         self.year = year

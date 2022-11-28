@@ -1,4 +1,4 @@
-class director_award:
+class DirectorAward:
     def __init__(self, director, year, award, result):
         self.director = director
         self.year = year
