@@ -22,89 +22,118 @@ def rnd_award():
   return f'{rnd_event}, {rnd_prize}'
 
 def rnd_yearofbirth():
-  return random.randint(1890, 2002)
+  return random.randint(1960, 2000)
 
-NDIRECTORS = 5
-NMOVIES = 5
-MAXAWARDS = 10
+NMOVIES = 15 # 8
+MAXDIRECTORS = 4 # 5
+MAXAWARDS = 10 # 8
 
-def main():
+HAVESPIELBERG = True # True
+MINSPIELGERMOVIES = 3 # 3
 
-  with open('movie_titles_short.json') as titles_json:
-    titles = json.load(titles_json)['movie_titles'][0:NMOVIES]
+HAVEDIRECTORSNOMOVIES = False # False
+FRACNOMOVIES = 3 # 3
 
-    DIRECTORS = []
-    DIRECTOR_NAMES = []
+HAVEMOVIESNOAWARDS = False # False
+FRACNOAWARDS = 3 # 3
 
-    MOVIES = []
-    MOVIE_TITLES = []
+ONLYAWARDSNOM = False # False
 
-    MOVIE_AWARDS = []
-    DIRECTOR_AWARDS = []
+with open('movie_titles_short.json') as titles_json:
+  titles = json.load(titles_json)['movie_titles'][0:NMOVIES]
 
-    # generate Director
-    for _ in range(0, NDIRECTORS):
-      name = names.get_full_name()
-      if name not in DIRECTOR_NAMES:
-        DIRECTOR_NAMES.append(name)
-        DIRECTORS.append(Director(name, rnd_yearofbirth()))
+  DIRECTORS = []
+  DIRECTORS_NOMOVIES = []
+  DIRECTOR_NAMES = []
 
-    # generate Movie
-    for movie_title in titles:
-        director = random.choice(DIRECTORS)
-        year = random.randint(director.yearofbirth+18, 2022)
-        budget = random.randint(10_000, 1_000_000)
-        gross = random.randint(100_000, 10_000_000)
+  MOVIES = []
+  MOVIE_TITLES = []
 
-        movie = Movie(movie_title, year, director, budget, gross)
+  MOVIE_AWARDS = []
+  DIRECTOR_AWARDS = []
 
-        if movie.title not in MOVIE_TITLES:
-            MOVIES.append(movie)
-            MOVIE_TITLES.append(movie.title)
+  spielberg = Director('Spielberg', 1970)
+  if(HAVESPIELBERG):
+    DIRECTORS.append(spielberg)
+    DIRECTOR_NAMES.append('Spielberg')
 
-            # generate MovieAward
-            for _ in range(0, random.randint(0, MAXAWARDS)):
-                movieAward = MovieAward(movie.title, movie.year, rnd_award(), random.choice(['won', 'nominated']))
+  # generate Director
+  for _ in range(0, MAXDIRECTORS):
+    name = names.get_full_name()
+    if name not in DIRECTOR_NAMES:
+      DIRECTOR_NAMES.append(name)
+      if HAVEDIRECTORSNOMOVIES and random.randint(1,FRACNOMOVIES)==1:
+        DIRECTORS_NOMOVIES.append(Director(name, rnd_yearofbirth()))
+        continue
+      DIRECTORS.append(Director(name, rnd_yearofbirth()))
 
-                # only one movie can have an award for (year, event, prize)
-                if not has_repetition_movie_awards(MOVIE_AWARDS, movie.title, movie.year, movieAward.award):
-                    MOVIE_AWARDS.append(movieAward)
+  # generate Movie
+  for movie_title in titles:
+    if len(DIRECTORS) == 0: break
+    director = random.choice(DIRECTORS)
 
-                    # generate DirectorAward, 
-                    if 'best director' in movieAward.award:
-                        directorAward = DirectorAward(
-                            movie.director, movie.year, movieAward.award.split(',')[0], movieAward.result)
-                        DIRECTOR_AWARDS.append(directorAward)
+    if MINSPIELGERMOVIES > 0: 
+      director = spielberg
+      MINSPIELGERMOVIES = MINSPIELGERMOVIES-1
+    
+    year = random.randint(director.yearofbirth+16, 2022)
+    budget = random.randint(10_000, 1_000_000)
+    gross = random.randint(100_000, 1_500_000)
 
-    # Write queries
-    f = open('sql/populate_schema.sql', 'w')
-    f.write('INSERT INTO directors (director, yearofbirth) VALUES\n')
-    first_run = True
-    for d in DIRECTORS:
-        first_run = False if first_run == True else f.write(f',\n')
-        f.write(f'(\'{d.name}\', {d.yearofbirth})')
+    movie = Movie(movie_title, year, director, budget, gross)
 
-    f.write(';\n\nINSERT INTO movies (title, year, director, budget, gross) VALUES\n')
-    first_run = True
-    for m in MOVIES:
-        first_run = False if first_run == True else f.write(f',\n')
-        f.write(
-            f'(\'{m.title}\', {m.year}, \'{m.director.name}\', {m.budget},{m.gross})')
+    if movie.title not in MOVIE_TITLES:
+      MOVIES.append(movie)
+      MOVIE_TITLES.append(movie.title)
 
-    f.write(';\n\nINSERT INTO movieawards (title, year, award, result) VALUES\n')
-    first_run = True
-    for a in MOVIE_AWARDS:
-        first_run = False if first_run == True else f.write(f',\n')
-        f.write(
-            f'(\'{a.title}\', {a.year}, \'{a.award}\', \'{a.result}\')')
+      # don't generate MovieAward
+      if HAVEMOVIESNOAWARDS and random.randint(1, FRACNOAWARDS)==1:
+        continue
 
-    f.write(';\n\nINSERT INTO directorawards (director, year, award, result) VALUES\n')
-    first_run = True
-    for a in DIRECTOR_AWARDS:
-        first_run = False if first_run == True else f.write(f',\n')
-        f.write(
-            f'(\'{a.director.name}\', {a.year}, \'{a.award}\', \'{a.result}\')')
-    f.write(';')
-    f.close()
+      # generate MovieAward
+      for _ in range(0, random.randint(0, MAXAWARDS)):
+        movieAward = MovieAward(movie.title, movie.year, rnd_award(), random.choice(['won', 'won', 'nominated']))
+        if ONLYAWARDSNOM:
+          movieAward.result = 'nominated'
+        # only one movie can have an award for (year, event, prize)
+        if not has_repetition_movie_awards(MOVIE_AWARDS, movie.title, movie.year, movieAward.award):
+          MOVIE_AWARDS.append(movieAward)
 
-main()
+          # generate DirectorAward
+          if 'best director' in movieAward.award:
+            directorAward = DirectorAward(
+                movie.director, movie.year, movieAward.award.split(',')[0], movieAward.result)
+            DIRECTOR_AWARDS.append(directorAward)
+
+  DIRECTORS.extend(DIRECTORS_NOMOVIES)
+
+  # Write queries
+  f = open('sql/populate_schema.sql', 'w')
+  f.write('INSERT INTO directors (director, yearofbirth) VALUES\n')
+  first_run = True
+  for d in DIRECTORS:
+      first_run = False if first_run == True else f.write(f',\n')
+      f.write(f'(\'{d.name}\', {d.yearofbirth})')
+
+  f.write(';\n\nINSERT INTO movies (title, year, director, budget, gross) VALUES\n')
+  first_run = True
+  for m in MOVIES:
+      first_run = False if first_run == True else f.write(f',\n')
+      f.write(
+          f'(\'{m.title}\', {m.year}, \'{m.director.name}\', {m.budget}, {m.gross})')
+
+  f.write(';\n\nINSERT INTO movieawards (title, year, award, result) VALUES\n')
+  first_run = True
+  for a in MOVIE_AWARDS:
+      first_run = False if first_run == True else f.write(f',\n')
+      f.write(
+          f'(\'{a.title}\', {a.year}, \'{a.award}\', \'{a.result}\')')
+
+  f.write(';\n\nINSERT INTO directorawards (director, year, award, result) VALUES\n')
+  first_run = True
+  for a in DIRECTOR_AWARDS:
+      first_run = False if first_run == True else f.write(f',\n')
+      f.write(
+          f'(\'{a.director.name}\', {a.year}, \'{a.award}\', \'{a.result}\')')
+  f.write(';')
+  f.close()
