@@ -31,11 +31,11 @@ MAXAWARDS = 10 # 8
 HAVESPIELBERG = True # True
 MINSPIELGERMOVIES = 3 # 3
 
-HAVEDIRECTORSNOMOVIES = False # False
-FRACNOMOVIES = 3 # 3
+HAVEDIRECTORSNOMOVIES = True # False
+FRACNOMOVIES = 6 # 3
 
-HAVEMOVIESNOAWARDS = False # False
-FRACNOAWARDS = 3 # 3
+HAVEMOVIESNOAWARDS = True # False
+FRACNOAWARDS = 6 # 3
 
 ONLYAWARDSNOM = False # False
 
@@ -72,7 +72,7 @@ with open('movie_titles_short.json') as titles_json:
     if len(DIRECTORS) == 0: break
     director = random.choice(DIRECTORS)
 
-    if MINSPIELGERMOVIES > 0: 
+    if HAVESPIELBERG and MINSPIELGERMOVIES > 0: 
       director = spielberg
       MINSPIELGERMOVIES = MINSPIELGERMOVIES-1
     
